@@ -1,0 +1,29 @@
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  email?: string;
+  avatar?: string;
+  createdAt: string;
+}
+
+export interface Order {
+  id: string;
+  customerName: string;
+  details: string;
+  quantity: number;
+  deliveryDate: string;
+  deliveryTime: string;
+  status: OrderStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OrderStatus = 'pending' | 'in-progress' | 'completed';
+
+export interface OrderStats {
+  pending: number;
+  inProgress: number;
+  completed: number;
+  total: number;
+}
