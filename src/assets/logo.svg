@@ -1,0 +1,20 @@
+<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="breadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F4A933;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E09620;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Bread shadow -->
+  <ellipse cx="62" cy="72" rx="45" ry="6" fill="rgba(90, 50, 20, 0.1)"/>
+  
+  <!-- Main bread body -->
+  <ellipse cx="60" cy="40" rx="40" ry="25" fill="url(#breadGradient)" stroke="#5A3214" stroke-width="3"/>
+  
+  <!-- Bread cuts/slices -->
+  <path d="M30 25 Q35 15 40 25" stroke="#5A3214" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M45 20 Q50 10 55 20" stroke="#5A3214" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M65 20 Q70 10 75 20" stroke="#5A3214" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M80 25 Q85 15 90 25" stroke="#5A3214" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>
