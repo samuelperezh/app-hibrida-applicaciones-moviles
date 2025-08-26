@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
-import { Edit3, LogOut, User, Lock, Info } from 'lucide-react';
+import { Edit3, LogOut, User, Lock, Info, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const Profile: React.FC = () => {
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout, updateUser, changePassword } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
   });
+
+  // Change password state
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
+  const [showPwd, setShowPwd] = useState({ current: false, next: false, confirm: false });
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [isChangingPwd, setIsChangingPwd] = useState(false);
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -41,6 +49,34 @@ const Profile: React.FC = () => {
   const confirmLogout = () => {
     logout();
     setShowLogoutConfirm(false);
+  };
+
+  const handlePasswordSubmit = async () => {
+    setPwdError('');
+    setPwdSuccess('');
+    if (!passwords.current || !passwords.next || !passwords.confirm) {
+      setPwdError('Completa todos los campos');
+      return;
+    }
+    if (passwords.next.length < 6) {
+      setPwdError('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    if (passwords.next !== passwords.confirm) {
+      setPwdError('La confirmación no coincide');
+      return;
+    }
+    setIsChangingPwd(true);
+    const result = await changePassword(passwords.current, passwords.next);
+    setIsChangingPwd(false);
+    if (result.ok) {
+      setPwdSuccess('Contraseña actualizada correctamente');
+      setPasswords({ current: '', next: '', confirm: '' });
+      setShowPwd({ current: false, next: false, confirm: false });
+      // Keep the form open to show success; allow user to close manually
+    } else {
+      setPwdError(result.error || 'No se pudo actualizar la contraseña');
+    }
   };
 
   if (!user) return null;
@@ -139,8 +175,11 @@ const Profile: React.FC = () => {
           <Lock className="w-5 h-5 mr-2" />
           Seguridad
         </h3>
-        
-        <button className="w-full flex items-center justify-between p-4 bg-beige/30 hover:bg-beige/50 rounded-xl transition-colors text-left">
+
+        <button
+          onClick={() => setShowPasswordForm(prev => !prev)}
+          className="w-full flex items-center justify-between p-4 bg-beige/30 hover:bg-beige/50 rounded-xl transition-colors text-left"
+        >
           <div>
             <p className="font-medium text-brown">Cambiar contraseña</p>
             <p className="text-brown/60 text-sm">Actualiza tu contraseña de acceso</p>
@@ -149,6 +188,114 @@ const Profile: React.FC = () => {
             <Lock className="w-5 h-5" />
           </div>
         </button>
+
+        {showPasswordForm && (
+          <div className="mt-4 space-y-4">
+            {pwdError && (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700" role="alert">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm">{pwdError}</span>
+              </div>
+            )}
+            {pwdSuccess && (
+              <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700" role="status">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-sm">{pwdSuccess}</span>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="currentPassword" className="block text-sm font-medium text-brown mb-2">Contraseña actual</label>
+              <div className="relative">
+                <input
+                  type={showPwd.current ? 'text' : 'password'}
+                  id="currentPassword"
+                  value={passwords.current}
+                  onChange={(e) => setPasswords(prev => ({ ...prev, current: e.target.value }))}
+                  className="w-full px-4 py-3 pr-12 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+                  placeholder="Ingresa tu contraseña actual"
+                  disabled={isChangingPwd}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(prev => ({ ...prev, current: !prev.current }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+                  disabled={isChangingPwd}
+                >
+                  {showPwd.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="newPassword" className="block text-sm font-medium text-brown mb-2">Nueva contraseña</label>
+              <div className="relative">
+                <input
+                  type={showPwd.next ? 'text' : 'password'}
+                  id="newPassword"
+                  value={passwords.next}
+                  onChange={(e) => setPasswords(prev => ({ ...prev, next: e.target.value }))}
+                  className="w-full px-4 py-3 pr-12 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+                  placeholder="Mínimo 6 caracteres"
+                  disabled={isChangingPwd}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(prev => ({ ...prev, next: !prev.next }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+                  disabled={isChangingPwd}
+                >
+                  {showPwd.next ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-brown mb-2">Confirmar contraseña</label>
+              <div className="relative">
+                <input
+                  type={showPwd.confirm ? 'text' : 'password'}
+                  id="confirmPassword"
+                  value={passwords.confirm}
+                  onChange={(e) => setPasswords(prev => ({ ...prev, confirm: e.target.value }))}
+                  className="w-full px-4 py-3 pr-12 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+                  placeholder="Repite la nueva contraseña"
+                  disabled={isChangingPwd}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(prev => ({ ...prev, confirm: !prev.confirm }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+                  disabled={isChangingPwd}
+                >
+                  {showPwd.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 pt-2">
+              <button
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setPasswords({ current: '', next: '', confirm: '' });
+                  setPwdError('');
+                  setPwdSuccess('');
+                }}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-brown py-2 px-4 rounded-xl font-medium transition-colors"
+                disabled={isChangingPwd}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePasswordSubmit}
+                className="flex-1 bg-golden hover:bg-golden/90 text-white py-2 px-4 rounded-xl font-medium transition-colors"
+                disabled={isChangingPwd}
+              >
+                {isChangingPwd ? 'Guardando...' : 'Guardar contraseña'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* App Info */}
