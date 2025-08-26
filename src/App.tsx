@@ -1,15 +1,15 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router';
-import { AuthProvider } from './context/AuthContext';
-import { OrdersProvider } from './context/OrdersContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import AppLayout from './components/AppLayout';
-import Login from './pages/Login';
-import Home from './pages/Home';
-import Orders from './pages/Orders';
-import OrderCreate from './pages/OrderCreate';
-import Profile from './pages/Profile';
-import NotFound from './pages/NotFound';
+import { AuthProvider } from './context/AuthContext.tsx';
+import { OrdersProvider } from './context/OrdersContext.tsx';
+import ProtectedRoute from './components/ProtectedRoute.tsx';
+import AppLayout from './components/AppLayout.tsx';
+import Login from './pages/Login.tsx';
+import Register from './pages/Register.tsx';
+import Home from './pages/Home.tsx';
+import Orders from './pages/Orders.tsx';
+import OrderCreate from './pages/OrderCreate.tsx';
+import Profile from './pages/Profile.tsx';
+import NotFound from './pages/NotFound.tsx';
 
 function App() {
   return (
@@ -19,6 +19,7 @@ function App() {
           <div className="min-h-screen">
             <Routes>
               <Route path="/" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               
               <Route
                 path="/app"

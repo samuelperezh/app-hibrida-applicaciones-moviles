@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Eye, EyeOff, AlertCircle, UserPlus } from 'lucide-react';
 import SplashScreen from '../components/SplashScreen';
+import { useAuth } from '../context/AuthContext';
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { user, login, isLoading } = useAuth();
-  const [formData, setFormData] = useState({ username: '', password: '' });
+  const { user, register, isLoading } = useAuth();
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    name: '',
+    email: '',
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
 
-  // Redirect if already logged in
   if (!isLoading && user) {
     return <Navigate to="/app/home" replace />;
   }
@@ -22,16 +26,20 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
-
     try {
-      const success = await login(formData.username, formData.password);
-      if (success) {
+      const result = await register({
+        username: formData.username.trim(),
+        password: formData.password,
+        name: formData.name.trim(),
+        email: formData.email.trim() || undefined,
+      });
+      if (result.ok) {
         setShowSplash(true);
       } else {
-        setError('Usuario o contraseña incorrectos');
+        setError(result.error || 'No se pudo crear la cuenta');
       }
     } catch (err) {
-      setError('Error al iniciar sesión. Inténtalo de nuevo.');
+      setError('Error al registrarse. Inténtalo de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -45,6 +53,11 @@ const Login: React.FC = () => {
     return <SplashScreen isVisible={true} />;
   }
 
+  const isValid =
+    formData.username.trim().length >= 3 &&
+    formData.password.length >= 6 &&
+    formData.name.trim().length >= 2;
+
   return (
     <>
       <div className="min-h-screen bg-beige flex items-center justify-center p-4">
@@ -53,21 +66,21 @@ const Login: React.FC = () => {
             <div className="w-20 h-14 mx-auto mb-4">
               <svg viewBox="0 0 120 80" className="w-full h-full">
                 <defs>
-                  <linearGradient id="breadGradientLogin" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <linearGradient id="breadGradientRegister" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" style={{ stopColor: '#F4A933', stopOpacity: 1 }} />
                     <stop offset="100%" style={{ stopColor: '#E09620', stopOpacity: 1 }} />
                   </linearGradient>
                 </defs>
                 <ellipse cx="62" cy="72" rx="45" ry="6" fill="rgba(90, 50, 20, 0.1)"/>
-                <ellipse cx="60" cy="40" rx="40" ry="25" fill="url(#breadGradientLogin)" stroke="#5A3214" strokeWidth="3"/>
+                <ellipse cx="60" cy="40" rx="40" ry="25" fill="url(#breadGradientRegister)" stroke="#5A3214" strokeWidth="3"/>
                 <path d="M30 25 Q35 15 40 25" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
                 <path d="M45 20 Q50 10 55 20" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
                 <path d="M65 20 Q70 10 75 20" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
                 <path d="M80 25 Q85 15 90 25" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
               </svg>
             </div>
-            <h1 className="text-3xl font-bold font-poppins text-brown mb-2">PanApp</h1>
-            <p className="text-brown/70">Gestión inteligente de pedidos</p>
+            <h1 className="text-3xl font-bold font-poppins text-brown mb-2">Crear cuenta</h1>
+            <p className="text-brown/70">Regístrate para empezar a gestionar pedidos</p>
           </div>
 
           <div className="bg-white rounded-2xl p-6 shadow-lg">
@@ -80,6 +93,22 @@ const Login: React.FC = () => {
               )}
 
               <div>
+                <label htmlFor="name" className="block text-sm font-medium text-brown mb-2">
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-3 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+                  placeholder="Tu nombre"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
                 <label htmlFor="username" className="block text-sm font-medium text-brown mb-2">
                   Usuario
                 </label>
@@ -89,8 +118,23 @@ const Login: React.FC = () => {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full px-4 py-3 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
-                  placeholder="Ingresa tu usuario"
+                  placeholder="Elige un usuario"
                   required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-brown mb-2">
+                  Correo electrónico (opcional)
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-3 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+                  placeholder="tu@email.com"
                   disabled={isSubmitting}
                 />
               </div>
@@ -106,7 +150,7 @@ const Login: React.FC = () => {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full px-4 py-3 pr-12 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
-                    placeholder="Ingresa tu contraseña"
+                    placeholder="Mínimo 6 caracteres"
                     required
                     disabled={isSubmitting}
                   />
@@ -123,20 +167,21 @@ const Login: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isSubmitting || !formData.username || !formData.password}
-                className="w-full bg-golden hover:bg-golden/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors"
+                disabled={isSubmitting || !isValid}
+                className="w-full bg-golden hover:bg-golden/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center space-x-2"
               >
-                {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
+                <UserPlus className="w-5 h-5" />
+                <span>{isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}</span>
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <button
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/')}
                 className="text-brown/70 hover:text-brown font-medium"
                 disabled={isSubmitting}
               >
-                ¿Aún no tienes cuenta? Registrarse
+                ¿Ya tienes cuenta? Inicia sesión
               </button>
             </div>
           </div>
@@ -144,12 +189,11 @@ const Login: React.FC = () => {
       </div>
 
       <SplashScreen isVisible={showSplash} onComplete={handleSplashComplete} />
-      
-      {showSplash && (
-        <Navigate to="/app/home" replace />
-      )}
+      {showSplash && <Navigate to="/app/home" replace />}
     </>
   );
 };
 
-export default Login;
+export default Register;
+
+
