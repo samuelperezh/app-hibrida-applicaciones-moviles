@@ -95,11 +95,7 @@ const OrderCreate: React.FC = () => {
       newErrors.details = 'Agrega productos o describe el pedido';
     }
 
-    if (cart.length > 0 && totalUnits < 1) {
-      newErrors.quantity = 'Selecciona al menos 1 unidad';
-    } else if (cart.length === 0 && formData.quantity < 1) {
-      newErrors.quantity = 'La cantidad debe ser mayor a 0';
-    }
+    // quantity is derived from product cart; no direct quantity input
 
     if (!formData.deliveryDate) {
       newErrors.deliveryDate = 'La fecha de entrega es obligatoria';
@@ -245,12 +241,16 @@ const OrderCreate: React.FC = () => {
                 if (!prod) return null;
                 return (
                   <div key={it.productId} className="bg-white border border-brown/10 rounded-xl p-3 flex items-center justify-between">
-                    <div>
+                    <div className="flex items-center space-x-3">
+                      {prod.image ? (
+                        <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover border border-brown/10" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-golden/20 flex items-center justify-center">
+                          <Tag className="w-5 h-5 text-golden" />
+                        </div>
+                      )}
                       <div className="font-medium text-brown">{prod.name}</div>
-                      <div className="text-xs text-brown/70 flex items-center space-x-1">
-                        <Coins className="w-3 h-3" />
-                        <span>{currency.format(prod.priceCOP)} c/u</span>
-                      </div>
+                      <div className="text-xs text-brown/70 flex items-center space-x-1"><Coins className="w-3 h-3" /><span>{currency.format(prod.priceCOP)} c/u</span></div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
@@ -390,40 +390,7 @@ const OrderCreate: React.FC = () => {
           )}
         </div>
 
-        {/* Quantity */}
-        <div>
-          <label htmlFor="quantity" className="block text-sm font-medium text-brown mb-2">
-            Cantidad
-          </label>
-          <input
-            type="number"
-            id="quantity"
-            min="1"
-            value={formData.quantity}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }));
-              if (errors.quantity) {
-                setErrors(prev => ({ ...prev, quantity: '' }));
-              }
-            }}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors ${
-              errors.quantity ? 'border-red-300 bg-red-50' : 'border-brown/20'
-            }`}
-            aria-describedby={errors.quantity ? 'quantity-error' : undefined}
-          />
-          
-          {errors.quantity && (
-            <div
-              id="quantity-error"
-              className="flex items-center space-x-1 text-red-600 text-sm mt-1"
-              role="alert"
-              aria-live="polite"
-            >
-              <AlertCircle className="w-4 h-4" />
-              <span>{errors.quantity}</span>
-            </div>
-          )}
-        </div>
+        {/* Quantity removed: handled by products cart */}
 
         {/* Delivery Date and Time */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
