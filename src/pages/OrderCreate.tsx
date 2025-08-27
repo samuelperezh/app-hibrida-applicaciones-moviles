@@ -1,15 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Calendar, Clock, User, Package, AlertCircle, ChevronDown, Plus } from 'lucide-react';
+import { Calendar, Clock, User, Package, AlertCircle, ChevronDown, Plus, Tag, Minus, Plus as PlusIcon, Trash2, Coins } from 'lucide-react';
 import { useOrders } from '../context/OrdersContext';
 import { Order, OrderStatus } from '../types';
 import { useClients } from '../context/ClientsContext';
+import { useProducts } from '../context/ProductsContext';
 
 const OrderCreate: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addOrder, editOrder } = useOrders();
   const { clients } = useClients();
+  const { products } = useProducts();
+
+  const currency = useMemo(() => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }), []);
   
   // Check if we're editing an existing order
   const editingOrder = location.state?.editOrder as Order | undefined;
@@ -26,6 +30,23 @@ const OrderCreate: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Shopping cart state
+  const [productQuery, setProductQuery] = useState('');
+  const [isProductOpen, setIsProductOpen] = useState(false);
+  const filteredProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(p => p.name.toLowerCase().includes(q));
+  }, [products, productQuery]);
+
+  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
+  const getProduct = (id: string) => products.find(p => p.id === id);
+  const totalUnits = useMemo(() => cart.reduce((sum, it) => sum + it.quantity, 0), [cart]);
+  const subtotal = useMemo(() => cart.reduce((sum, it) => {
+    const prod = getProduct(it.productId);
+    return sum + (prod ? prod.priceCOP * it.quantity : 0);
+  }, 0), [cart, products]);
 
   // Searchable client dropdown state
   const [clientQuery, setClientQuery] = useState('');
@@ -70,11 +91,13 @@ const OrderCreate: React.FC = () => {
       newErrors.customerName = 'El nombre del cliente es obligatorio';
     }
 
-    if (!formData.details.trim()) {
-      newErrors.details = 'Los detalles del pedido son obligatorios';
+    if (cart.length === 0 && !formData.details.trim()) {
+      newErrors.details = 'Agrega productos o describe el pedido';
     }
 
-    if (formData.quantity < 1) {
+    if (cart.length > 0 && totalUnits < 1) {
+      newErrors.quantity = 'Selecciona al menos 1 unidad';
+    } else if (cart.length === 0 && formData.quantity < 1) {
       newErrors.quantity = 'La cantidad debe ser mayor a 0';
     }
 
@@ -112,10 +135,20 @@ const OrderCreate: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const summaryFromCart = cart.length > 0
+        ? cart.map(it => `${getProduct(it.productId)?.name || 'Producto'} x${it.quantity}`).join(', ')
+        : '';
+      const finalDetails = formData.details.trim() ? formData.details.trim() : summaryFromCart;
+      const finalQuantity = cart.length > 0 ? totalUnits : formData.quantity;
+      const payload = {
+        ...formData,
+        details: finalDetails,
+        quantity: finalQuantity,
+      };
       if (isEditing && editingOrder) {
-        editOrder(editingOrder.id, formData);
+        editOrder(editingOrder.id, payload);
       } else {
-        addOrder(formData);
+        addOrder(payload);
       }
       
       navigate('/app/orders');
@@ -145,6 +178,106 @@ const OrderCreate: React.FC = () => {
   return (
     <div className="flex-1 p-4">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Products - Shopping Cart */}
+        <div>
+          <label className="block text-sm font-medium text-brown mb-2">
+            <Tag className="w-4 h-4 inline mr-1" />
+            Productos del pedido
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              onFocus={() => setIsProductOpen(true)}
+              onBlur={() => setTimeout(() => setIsProductOpen(false), 150)}
+              className="w-full px-4 py-3 pr-12 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+              placeholder="Buscar productos por nombre"
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setIsProductOpen(prev => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+              aria-label="Desplegar productos"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
+
+            {isProductOpen && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-brown/20 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {filteredProducts.length === 0 ? (
+                  <div className="p-4 text-brown/60 text-sm">No se encontraron productos</div>
+                ) : (
+                  filteredProducts.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setCart(prev => {
+                          const idx = prev.findIndex(it => it.productId === p.id);
+                          if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+                            return next;
+                          }
+                          return [...prev, { productId: p.id, quantity: 1 }];
+                        });
+                        setProductQuery('');
+                        setIsProductOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-beige/50 transition-colors flex items-center justify-between first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      <span className="text-brown">{p.name}</span>
+                      <span className="text-brown/70 text-sm">{currency.format(p.priceCOP)}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {cart.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {cart.map((it, idx) => {
+                const prod = getProduct(it.productId);
+                if (!prod) return null;
+                return (
+                  <div key={it.productId} className="bg-white border border-brown/10 rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-brown">{prod.name}</div>
+                      <div className="text-xs text-brown/70 flex items-center space-x-1">
+                        <Coins className="w-3 h-3" />
+                        <span>{currency.format(prod.priceCOP)} c/u</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
+                        <Minus className="w-4 h-4 text-brown" />
+                      </button>
+                      <span className="min-w-[2ch] text-brown font-medium text-center">{it.quantity}</span>
+                      <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: x.quantity + 1 } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
+                        <PlusIcon className="w-4 h-4 text-brown" />
+                      </button>
+                      <div className="w-20 text-right text-brown font-medium">
+                        {currency.format(prod.priceCOP * it.quantity)}
+                      </div>
+                      <button type="button" onClick={() => setCart(prev => prev.filter(x => x.productId !== it.productId))} className="p-2 rounded-lg bg-red-50 hover:bg-red-100">
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="flex items-center justify-between px-2 pt-2 text-brown">
+                <span className="font-medium">Unidades totales: {totalUnits}</span>
+                <span className="font-semibold">Subtotal: {currency.format(subtotal)}</span>
+              </div>
+            </div>
+          )}
+        </div>
         {/* Customer - Searchable Dropdown */}
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium text-brown mb-2">

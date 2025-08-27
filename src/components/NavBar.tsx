@@ -59,21 +59,7 @@ const NavBar: React.FC<NavBarProps> = ({
             <ArrowLeft className="w-5 h-5 text-brown" />
           </button>
         ) : (
-          <div className="w-8 h-6">
-            <svg viewBox="0 0 120 80" className="w-full h-full">
-              <defs>
-                <linearGradient id="breadGradientNav" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: '#F4A933', stopOpacity: 1 }} />
-                  <stop offset="100%" style={{ stopColor: '#E09620', stopOpacity: 1 }} />
-                </linearGradient>
-              </defs>
-              <ellipse cx="60" cy="40" rx="40" ry="25" fill="url(#breadGradientNav)" stroke="#5A3214" strokeWidth="3"/>
-              <path d="M30 25 Q35 15 40 25" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              <path d="M45 20 Q50 10 55 20" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              <path d="M65 20 Q70 10 75 20" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              <path d="M80 25 Q85 15 90 25" stroke="#5A3214" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-            </svg>
-          </div>
+          <div className="w-8 h-6" />
         )}
         <h1 className="text-xl font-bold font-poppins text-brown">{getTitle()}</h1>
       </div>
