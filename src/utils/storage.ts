@@ -1,10 +1,11 @@
-import { User, Order, Client } from '../types';
+import { User, Order, Client, Product } from '../types';
 
 const STORAGE_KEYS = {
   USER: 'panapp_user',
   ORDERS: 'panapp_orders',
   USERS: 'panapp_users',
   CLIENTS: 'panapp_clients',
+  PRODUCTS: 'panapp_products',
 } as const;
 
 // User storage functions
@@ -249,5 +250,54 @@ export const deleteClient = (id: string): void => {
     localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
   } catch (error) {
     console.error('Error deleting client from localStorage:', error);
+  }
+};
+
+// Products storage functions
+export const getProducts = (): Product[] => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error getting products from localStorage:', error);
+    return [];
+  }
+};
+
+export const saveProduct = (product: Product): void => {
+  try {
+    const products = getProducts();
+    const idx = products.findIndex(p => p.id === product.id);
+    if (idx !== -1) {
+      products[idx] = { ...product, updatedAt: new Date().toISOString() };
+    } else {
+      products.push(product);
+    }
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+  } catch (error) {
+    console.error('Error saving product to localStorage:', error);
+  }
+};
+
+export const updateProduct = (id: string, updates: Partial<Product>): void => {
+  try {
+    const products = getProducts();
+    const idx = products.findIndex(p => p.id === id);
+    if (idx !== -1) {
+      products[idx] = { ...products[idx], ...updates, updatedAt: new Date().toISOString() };
+      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+    }
+  } catch (error) {
+    console.error('Error updating product in localStorage:', error);
+  }
+};
+
+export const deleteProduct = (id: string): void => {
+  try {
+    const products = getProducts();
+    const filtered = products.filter(p => p.id !== id);
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(filtered));
+  } catch (error) {
+    console.error('Error deleting product from localStorage:', error);
   }
 };

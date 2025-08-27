@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider } from './context/AuthContext.tsx';
 import { OrdersProvider } from './context/OrdersContext.tsx';
 import { ClientsProvider } from './context/ClientsContext.tsx';
+import { ProductsProvider } from './context/ProductsContext.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import AppLayout from './components/AppLayout.tsx';
 import Login from './pages/Login.tsx';
@@ -9,6 +10,8 @@ import Register from './pages/Register.tsx';
 import Home from './pages/Home.tsx';
 import Clients from './pages/Clients.tsx';
 import ClientCreate from './pages/ClientCreate.tsx';
+import Products from './pages/Products.tsx';
+import ProductCreate from './pages/ProductCreate.tsx';
 import Orders from './pages/Orders.tsx';
 import OrderCreate from './pages/OrderCreate.tsx';
 import Profile from './pages/Profile.tsx';
@@ -19,6 +22,7 @@ function App() {
     <AuthProvider>
       <OrdersProvider>
         <ClientsProvider>
+        <ProductsProvider>
         <Router>
           <div className="min-h-screen">
             <Routes>
@@ -37,6 +41,8 @@ function App() {
                 <Route path="home" element={<Home />} />
                 <Route path="clients" element={<Clients />} />
                 <Route path="clients/new" element={<ClientCreate />} />
+                <Route path="products" element={<Products />} />
+                <Route path="products/new" element={<ProductCreate />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="orders/new" element={<OrderCreate />} />
                 <Route path="profile" element={<Profile />} />
@@ -47,6 +53,7 @@ function App() {
             </Routes>
           </div>
         </Router>
+        </ProductsProvider>
         </ClientsProvider>
       </OrdersProvider>
     </AuthProvider>

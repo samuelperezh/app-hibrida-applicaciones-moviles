@@ -28,6 +28,10 @@ const NavBar: React.FC<NavBarProps> = ({
         return 'Clientes';
       case '/app/clients/new':
         return 'Nuevo Cliente';
+      case '/app/products':
+        return 'Productos';
+      case '/app/products/new':
+        return 'Nuevo Producto';
       case '/app/orders':
         return 'Pedidos';
       case '/app/orders/new':
