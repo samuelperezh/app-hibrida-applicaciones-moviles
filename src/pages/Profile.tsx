@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, LogOut, User, Lock, Info, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Edit3, LogOut, User, Lock, Info, Eye, EyeOff, AlertCircle, CheckCircle2, Camera } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -10,6 +10,7 @@ const Profile: React.FC = () => {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
+    avatar: user?.avatar || '',
   });
 
   // Change password state
@@ -29,6 +30,7 @@ const Profile: React.FC = () => {
       setFormData({
         name: user?.name || '',
         email: user?.email || '',
+        avatar: user?.avatar || '',
       });
     }
     setIsEditing(!isEditing);
@@ -38,6 +40,12 @@ const Profile: React.FC = () => {
     setFormData({
       name: user?.name || '',
       email: user?.email || '',
+      avatar: user?.avatar || '',
+    });
+    setFormData({
+      name: user?.name || '',
+      email: user?.email || '',
+      avatar: user?.avatar || '',
     });
     setIsEditing(false);
   };
@@ -86,8 +94,31 @@ const Profile: React.FC = () => {
       {/* Profile Header */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-brown/5">
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-golden/20 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-golden" />
+          <div className="relative">
+            {formData.avatar ? (
+              <img src={formData.avatar} alt="Avatar" className="w-16 h-16 rounded-full object-cover border border-brown/10" />
+            ) : (
+              <div className="w-16 h-16 bg-golden/20 rounded-full flex items-center justify-center">
+                <User className="w-8 h-8 text-golden" />
+              </div>
+            )}
+            {isEditing && (
+              <label className="absolute -bottom-1 -right-1 bg-white border border-brown/10 rounded-full p-2 cursor-pointer shadow-sm hover:bg-beige transition-colors">
+                <Camera className="w-4 h-4 text-brown" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) { setFormData(prev => ({ ...prev, avatar: '' })); return; }
+                    const reader = new FileReader();
+                    reader.onload = () => setFormData(prev => ({ ...prev, avatar: String(reader.result || '') }));
+                    reader.readAsDataURL(f);
+                  }}
+                />
+              </label>
+            )}
           </div>
           <div>
             <h2 className="text-xl font-bold font-poppins text-brown">

@@ -10,14 +10,14 @@ const ProductCreate: React.FC = () => {
   const editProductId = location.state?.editProductId as string | undefined;
   const isEditing = !!editProductId;
 
-  const [formData, setFormData] = useState({ name: '', priceCOP: '' });
+  const [formData, setFormData] = useState({ name: '', priceCOP: '', image: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isEditing && editProductId) {
       const p = getProductById(editProductId);
-      if (p) setFormData({ name: p.name, priceCOP: String(p.priceCOP) });
+      if (p) setFormData({ name: p.name, priceCOP: String(p.priceCOP), image: p.image || '' });
     }
   }, [isEditing, editProductId, getProductById]);
 
@@ -37,14 +37,21 @@ const ProductCreate: React.FC = () => {
     try {
       const price = Number(formData.priceCOP);
       if (isEditing && editProductId) {
-        editProduct(editProductId, { name: formData.name.trim(), priceCOP: price });
+        editProduct(editProductId, { name: formData.name.trim(), priceCOP: price, image: formData.image || undefined });
       } else {
-        addProduct({ name: formData.name.trim(), priceCOP: price } as any);
+        addProduct({ name: formData.name.trim(), priceCOP: price, image: formData.image || undefined } as any);
       }
       navigate('/app/products');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleImage = (file?: File) => {
+    if (!file) { setFormData(prev => ({ ...prev, image: '' })); return; }
+    const reader = new FileReader();
+    reader.onload = () => setFormData(prev => ({ ...prev, image: String(reader.result || '') }));
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -91,6 +98,24 @@ const ProductCreate: React.FC = () => {
               <span>{errors.priceCOP}</span>
             </div>
           )}
+        </div>
+
+        <div>
+          <label htmlFor="image" className="block text-sm font-medium text-brown mb-2">
+            Imagen del producto (opcional)
+          </label>
+          <div className="flex items-center space-x-3">
+            <input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleImage(e.target.files?.[0])}
+              className="block w-full text-sm text-brown/80 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-beige file:text-brown hover:file:bg-golden/20"
+            />
+            {formData.image && (
+              <img src={formData.image} alt="Vista previa" className="w-16 h-16 rounded-xl object-cover border border-brown/10" />
+            )}
+          </div>
         </div>
 
         <div className="flex space-x-4 pt-6">
