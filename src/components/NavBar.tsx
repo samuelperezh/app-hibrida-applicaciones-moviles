@@ -24,6 +24,10 @@ const NavBar: React.FC<NavBarProps> = ({
     switch (location.pathname) {
       case '/app/home':
         return 'PanApp';
+      case '/app/clients':
+        return 'Clientes';
+      case '/app/clients/new':
+        return 'Nuevo Cliente';
       case '/app/orders':
         return 'Pedidos';
       case '/app/orders/new':

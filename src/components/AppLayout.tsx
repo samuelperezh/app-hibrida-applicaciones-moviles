@@ -9,16 +9,21 @@ const AppLayout: React.FC = () => {
 
   const isOrderCreatePage = location.pathname === '/app/orders/new';
   const isOrdersPage = location.pathname === '/app/orders';
+  const isClientsPage = location.pathname === '/app/clients';
 
   const handleCreateOrder = () => {
-    navigate('/app/orders/new');
+    if (isOrdersPage) {
+      navigate('/app/orders/new');
+    } else if (isClientsPage) {
+      navigate('/app/clients/new');
+    }
   };
 
   return (
     <div className="min-h-screen bg-beige flex flex-col">
       <NavBar
         showBackButton={isOrderCreatePage}
-        showCreateButton={isOrdersPage}
+        showCreateButton={isOrdersPage || isClientsPage}
         onCreateClick={handleCreateOrder}
       />
       

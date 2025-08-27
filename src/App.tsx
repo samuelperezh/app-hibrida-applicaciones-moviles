@@ -1,11 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider } from './context/AuthContext.tsx';
 import { OrdersProvider } from './context/OrdersContext.tsx';
+import { ClientsProvider } from './context/ClientsContext.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import AppLayout from './components/AppLayout.tsx';
 import Login from './pages/Login.tsx';
 import Register from './pages/Register.tsx';
 import Home from './pages/Home.tsx';
+import Clients from './pages/Clients.tsx';
+import ClientCreate from './pages/ClientCreate.tsx';
 import Orders from './pages/Orders.tsx';
 import OrderCreate from './pages/OrderCreate.tsx';
 import Profile from './pages/Profile.tsx';
@@ -15,6 +18,7 @@ function App() {
   return (
     <AuthProvider>
       <OrdersProvider>
+        <ClientsProvider>
         <Router>
           <div className="min-h-screen">
             <Routes>
@@ -31,6 +35,8 @@ function App() {
               >
                 <Route index element={<Navigate to="/app/home" replace />} />
                 <Route path="home" element={<Home />} />
+                <Route path="clients" element={<Clients />} />
+                <Route path="clients/new" element={<ClientCreate />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="orders/new" element={<OrderCreate />} />
                 <Route path="profile" element={<Profile />} />
@@ -41,6 +47,7 @@ function App() {
             </Routes>
           </div>
         </Router>
+        </ClientsProvider>
       </OrdersProvider>
     </AuthProvider>
   );

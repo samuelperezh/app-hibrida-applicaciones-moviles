@@ -7,6 +7,15 @@ export interface User {
   createdAt: string;
 }
 
+export interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Order {
   id: string;
   customerName: string;

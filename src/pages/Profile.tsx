@@ -312,11 +312,11 @@ const Profile: React.FC = () => {
           </div>
           <div className="flex justify-between items-center">
             <span className="text-brown/70">Última actualización</span>
-            <span className="text-brown font-medium">Enero 2025</span>
+            <span className="text-brown font-medium">Agosto 2025</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-brown/70">Desarrollado por</span>
-            <span className="text-brown font-medium">PanApp Team</span>
+            <span className="text-brown font-medium">Samuel Pérez</span>
           </div>
         </div>
       </div>

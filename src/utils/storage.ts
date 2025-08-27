@@ -1,9 +1,10 @@
-import { User, Order } from '../types';
+import { User, Order, Client } from '../types';
 
 const STORAGE_KEYS = {
   USER: 'panapp_user',
   ORDERS: 'panapp_orders',
   USERS: 'panapp_users',
+  CLIENTS: 'panapp_clients',
 } as const;
 
 // User storage functions
@@ -199,5 +200,54 @@ export const changeStoredUserPassword = async (
   } catch (error) {
     console.error('Error changing user password in localStorage:', error);
     return { ok: false, error: 'No se pudo cambiar la contraseña' };
+  }
+};
+
+// Clients storage functions
+export const getClients = (): Client[] => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.CLIENTS);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error getting clients from localStorage:', error);
+    return [];
+  }
+};
+
+export const saveClient = (client: Client): void => {
+  try {
+    const clients = getClients();
+    const idx = clients.findIndex(c => c.id === client.id);
+    if (idx !== -1) {
+      clients[idx] = { ...client, updatedAt: new Date().toISOString() };
+    } else {
+      clients.push(client);
+    }
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+  } catch (error) {
+    console.error('Error saving client to localStorage:', error);
+  }
+};
+
+export const updateClient = (id: string, updates: Partial<Client>): void => {
+  try {
+    const clients = getClients();
+    const idx = clients.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      clients[idx] = { ...clients[idx], ...updates, updatedAt: new Date().toISOString() };
+      localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+    }
+  } catch (error) {
+    console.error('Error updating client in localStorage:', error);
+  }
+};
+
+export const deleteClient = (id: string): void => {
+  try {
+    const clients = getClients();
+    const filtered = clients.filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
+  } catch (error) {
+    console.error('Error deleting client from localStorage:', error);
   }
 };

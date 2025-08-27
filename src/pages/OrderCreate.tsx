@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Calendar, Clock, User, Package, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, Package, AlertCircle, ChevronDown, Plus } from 'lucide-react';
 import { useOrders } from '../context/OrdersContext';
 import { Order, OrderStatus } from '../types';
+import { useClients } from '../context/ClientsContext';
 
 const OrderCreate: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addOrder, editOrder } = useOrders();
+  const { clients } = useClients();
   
   // Check if we're editing an existing order
   const editingOrder = location.state?.editOrder as Order | undefined;
@@ -25,17 +27,20 @@ const OrderCreate: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Popular customer suggestions (could come from localStorage in a real app)
-  const customerSuggestions = [
-    'María González',
-    'Carlos Ruiz',
-    'Ana López',
-    'José Martínez',
-    'Carmen Sánchez',
-  ];
+  // Searchable client dropdown state
+  const [clientQuery, setClientQuery] = useState('');
+  const [isClientOpen, setIsClientOpen] = useState(false);
+  const filteredClients = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q) ||
+      c.address.toLowerCase().includes(q)
+    );
+  }, [clients, clientQuery]);
 
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  // legacy suggestion flags removed; using dropdown
 
   useEffect(() => {
     if (isEditing && editingOrder) {
@@ -126,34 +131,21 @@ const OrderCreate: React.FC = () => {
   };
 
   const handleCustomerNameChange = (value: string) => {
+    setClientQuery(value);
     setFormData(prev => ({ ...prev, customerName: value }));
-    
-    if (value.length > 0) {
-      const filtered = customerSuggestions.filter(name =>
-        name.toLowerCase().includes(value.toLowerCase()) &&
-        name.toLowerCase() !== value.toLowerCase()
-      );
-      setFilteredSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-    } else {
-      setShowSuggestions(false);
-    }
-
-    // Clear error when user starts typing
-    if (errors.customerName) {
-      setErrors(prev => ({ ...prev, customerName: '' }));
-    }
+    if (errors.customerName) setErrors(prev => ({ ...prev, customerName: '' }));
   };
 
-  const selectSuggestion = (name: string) => {
+  const selectClient = (name: string) => {
     setFormData(prev => ({ ...prev, customerName: name }));
-    setShowSuggestions(false);
+    setClientQuery(name);
+    setIsClientOpen(false);
   };
 
   return (
     <div className="flex-1 p-4">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer Name */}
+        {/* Customer - Searchable Dropdown */}
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium text-brown mb-2">
             <User className="w-4 h-4 inline mr-1" />
@@ -163,40 +155,59 @@ const OrderCreate: React.FC = () => {
             <input
               type="text"
               id="customerName"
-              value={formData.customerName}
+              value={clientQuery}
               onChange={(e) => handleCustomerNameChange(e.target.value)}
-              onFocus={() => {
-                if (formData.customerName && filteredSuggestions.length > 0) {
-                  setShowSuggestions(true);
-                }
-              }}
-              onBlur={() => {
-                // Delay hiding suggestions to allow clicking on them
-                setTimeout(() => setShowSuggestions(false), 200);
-              }}
-              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors ${
+              onFocus={() => setIsClientOpen(true)}
+              onBlur={() => setTimeout(() => setIsClientOpen(false), 150)}
+              className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors ${
                 errors.customerName ? 'border-red-300 bg-red-50' : 'border-brown/20'
               }`}
-              placeholder="Nombre del cliente"
+              placeholder="Buscar por nombre, teléfono o dirección"
               aria-describedby={errors.customerName ? 'customerName-error' : undefined}
             />
-            
-            {showSuggestions && filteredSuggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-brown/20 rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                {filteredSuggestions.map((name, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => selectSuggestion(name)}
-                    className="w-full text-left px-4 py-2 hover:bg-beige/50 transition-colors first:rounded-t-xl last:rounded-b-xl"
-                  >
-                    {name}
-                  </button>
-                ))}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setIsClientOpen(prev => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+              aria-label="Desplegar clientes"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
+
+            {isClientOpen && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-brown/20 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {filteredClients.length === 0 ? (
+                  <div className="p-4 text-brown/60 text-sm">No se encontraron clientes</div>
+                ) : (
+                  filteredClients.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectClient(c.name)}
+                      className="w-full text-left px-4 py-3 hover:bg-beige/50 transition-colors flex flex-col space-y-1 first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      <div className="font-medium text-brown">{c.name}</div>
+                      <div className="text-xs text-brown/70">{c.phone}</div>
+                      <div className="text-xs text-brown/70">{c.address}</div>
+                    </button>
+                  ))
+                )}
+                <div className="border-t border-brown/10" />
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => navigate('/app/clients/new')}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-beige/30 hover:bg-beige/50 rounded-b-xl transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Crear nuevo cliente</span>
+                </button>
               </div>
             )}
           </div>
-          
+
           {errors.customerName && (
             <div
               id="customerName-error"
