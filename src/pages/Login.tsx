@@ -67,7 +67,7 @@ const Login: React.FC = () => {
               </svg>
             </div>
             <h1 className="text-3xl font-bold font-poppins text-brown mb-2">PanApp</h1>
-            <p className="text-brown/70">Gestión inteligente de pedidos</p>
+            <p className="text-brown/70">Gestión de pedidos para panaderías</p>
           </div>
 
           <div className="bg-white rounded-2xl p-6 shadow-lg">

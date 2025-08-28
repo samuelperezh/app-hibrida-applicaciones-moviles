@@ -45,13 +45,9 @@ const Products: React.FC = () => {
               <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm border border-brown/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {p.image ? (
-                      <img src={p.image} alt={p.name} className="w-12 h-12 rounded-xl object-cover border border-brown/10" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-golden/20 flex items-center justify-center">
-                        <Tag className="w-6 h-6 text-golden" />
-                      </div>
-                    )}
+                    <div className="w-12 h-12 rounded-full bg-golden/20 flex items-center justify-center">
+                      <Tag className="w-6 h-6 text-golden" />
+                    </div>
                     <div>
                       <h3 className="text-brown font-semibold">{p.name}</h3>
                       <div className="text-brown/70 text-sm flex items-center space-x-2">

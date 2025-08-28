@@ -32,7 +32,7 @@ const AppLayout: React.FC = () => {
         onCreateClick={handleCreateOrder}
       />
       
-      <main className="flex-1 overflow-auto pb-20">
+      <main className="flex-1 overflow-auto pb-20 bg-beige">
         <Outlet />
       </main>
 

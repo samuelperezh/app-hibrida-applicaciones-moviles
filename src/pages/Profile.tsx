@@ -112,9 +112,13 @@ const Profile: React.FC = () => {
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (!f) { setFormData(prev => ({ ...prev, avatar: '' })); return; }
-                    const reader = new FileReader();
-                    reader.onload = () => setFormData(prev => ({ ...prev, avatar: String(reader.result || '') }));
-                    reader.readAsDataURL(f);
+                    compressImage(f, 600, 600, 0.8)
+                      .then(data => setFormData(prev => ({ ...prev, avatar: data })))
+                      .catch(() => {
+                        const reader = new FileReader();
+                        reader.onload = () => setFormData(prev => ({ ...prev, avatar: String(reader.result || '') }));
+                        reader.readAsDataURL(f);
+                      });
                   }}
                 />
               </label>
@@ -378,3 +382,28 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
+
+// Local helper for compressing avatar images
+const compressImage = (file: File, maxW: number, maxH: number, quality: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      const ratio = Math.min(maxW / width, maxH / height, 1);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('no ctx')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      URL.revokeObjectURL(url);
+      resolve(dataUrl);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};

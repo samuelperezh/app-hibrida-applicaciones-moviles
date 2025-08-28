@@ -20,7 +20,6 @@ export interface Product {
   id: string;
   name: string;
   priceCOP: number; // stored in COP as integer or float
-  image?: string; // data URL
   createdAt: string;
   updatedAt: string;
 }
