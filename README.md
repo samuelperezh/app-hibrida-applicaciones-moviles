@@ -1,4 +1,6 @@
-![Logo PanApp](src/assets/logo.svg)
+<p align="center">
+  <img src="src/assets/logo.svg" alt="Logo PanApp" width="120" />
+</p>
 
 <h1 align="center">PanApp</h1>
 
@@ -20,6 +22,10 @@ PanApp es una app construida con React + Vite que funciona sin conexión a inter
 - Tailwind CSS 3: estilos utilitarios y diseño responsivo.
 - Lucide React: iconografía.
 - Almacenamiento local (`localStorage`): persistencia de datos offline.
+
+## Enlace Figma
+
+[https://www.figma.com/design/XPNO7GJ3gkuetCawdmdTJS/PanApp?node-id=16-4&t=xvPDOR5uHFg6V8UH-1](https://www.figma.com/design/XPNO7GJ3gkuetCawdmdTJS/PanApp?node-id=16-4&t=xvPDOR5uHFg6V8UH-1)
 
 ## Ejecución del Proyecto
 
