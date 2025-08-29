@@ -17,10 +17,12 @@ const OrderCard: React.FC<OrderCardProps> = ({
   onStatusChange 
 }) => {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { 
-      day: 'numeric', 
-      month: 'short' 
+    // Parse YYYY-MM-DD as local date to avoid timezone shift
+    const [y, m, d] = dateString.split('-').map(Number);
+    const date = new Date(y, (m || 1) - 1, d || 1);
+    return date.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
     });
   };
 

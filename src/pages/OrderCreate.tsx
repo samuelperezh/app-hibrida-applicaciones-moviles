@@ -63,6 +63,13 @@ const OrderCreate: React.FC = () => {
 
   // legacy suggestion flags removed; using dropdown
 
+  const getTodayInputValue = (): string => {
+    const now = new Date();
+    const tzOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+    const local = new Date(now.getTime() - tzOffsetMs);
+    return local.toISOString().split('T')[0];
+  };
+
   useEffect(() => {
     if (isEditing && editingOrder) {
       setFormData({
@@ -78,7 +85,7 @@ const OrderCreate: React.FC = () => {
 
   // Set minimum date to today
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayInputValue();
     if (!formData.deliveryDate) {
       setFormData(prev => ({ ...prev, deliveryDate: today }));
     }
@@ -91,20 +98,18 @@ const OrderCreate: React.FC = () => {
       newErrors.customerName = 'El nombre del cliente es obligatorio';
     }
 
-    if (cart.length === 0 && !formData.details.trim()) {
-      newErrors.details = 'Agrega productos o describe el pedido';
-    }
+    // Notes are optional regardless of cart contents
 
     // quantity is derived from product cart; no direct quantity input
 
     if (!formData.deliveryDate) {
       newErrors.deliveryDate = 'La fecha de entrega es obligatoria';
     } else {
-      const selectedDate = new Date(formData.deliveryDate);
+      // Compare dates in local time to avoid timezone issues
+      const selectedDate = new Date(`${formData.deliveryDate}T00:00`);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      if (selectedDate < today) {
+      if (selectedDate.getTime() < today.getTime()) {
         newErrors.deliveryDate = 'La fecha no puede ser anterior a hoy';
       }
     }
@@ -240,15 +245,15 @@ const OrderCreate: React.FC = () => {
                 const prod = getProduct(it.productId);
                 if (!prod) return null;
                 return (
-                  <div key={it.productId} className="bg-white border border-brown/10 rounded-xl p-3 flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
+                  <div key={it.productId} className="bg-white border border-brown/10 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <div className="w-12 h-12 rounded-xl bg-golden/20 flex items-center justify-center">
                         <Tag className="w-5 h-5 text-golden" />
                       </div>
-                      <div className="font-medium text-brown">{prod.name}</div>
-                      <div className="text-xs text-brown/70 flex items-center space-x-1"><Coins className="w-3 h-3" /><span>{currency.format(prod.priceCOP)} c/u</span></div>
+                      <div className="font-medium text-brown truncate">{prod.name}</div>
+                      <div className="text-xs text-brown/70 flex items-center space-x-1 flex-shrink-0"><Coins className="w-3 h-3" /><span>{currency.format(prod.priceCOP)} c/u</span></div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 w-full sm:w-auto sm:justify-end">
                       <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
                         <Minus className="w-4 h-4 text-brown" />
                       </button>
@@ -256,7 +261,7 @@ const OrderCreate: React.FC = () => {
                       <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: x.quantity + 1 } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
                         <PlusIcon className="w-4 h-4 text-brown" />
                       </button>
-                      <div className="w-20 text-right text-brown font-medium">
+                      <div className="w-16 sm:w-20 text-right text-brown font-medium text-sm sm:text-base">
                         {currency.format(prod.priceCOP * it.quantity)}
                       </div>
                       <button type="button" onClick={() => setCart(prev => prev.filter(x => x.productId !== it.productId))} className="p-2 rounded-lg bg-red-50 hover:bg-red-100">
@@ -267,7 +272,7 @@ const OrderCreate: React.FC = () => {
                 );
               })}
 
-              <div className="flex items-center justify-between px-2 pt-2 text-brown">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 px-2 pt-2 text-brown">
                 <span className="font-medium">Unidades totales: {totalUnits}</span>
                 <span className="font-semibold">Subtotal: {currency.format(subtotal)}</span>
               </div>
@@ -354,7 +359,7 @@ const OrderCreate: React.FC = () => {
         <div>
           <label htmlFor="details" className="block text-sm font-medium text-brown mb-2">
             <Package className="w-4 h-4 inline mr-1" />
-            Detalles del pedido
+            Notas del pedido
           </label>
           <textarea
             id="details"
@@ -369,7 +374,7 @@ const OrderCreate: React.FC = () => {
             className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors resize-none ${
               errors.details ? 'border-red-300 bg-red-50' : 'border-brown/20'
             }`}
-            placeholder="Describe los productos del pedido..."
+            placeholder="Agrega notas adicionales del pedido..."
             aria-describedby={errors.details ? 'details-error' : undefined}
           />
           
@@ -399,7 +404,7 @@ const OrderCreate: React.FC = () => {
               type="date"
               id="deliveryDate"
               value={formData.deliveryDate}
-              min={new Date().toISOString().split('T')[0]}
+              min={getTodayInputValue()}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, deliveryDate: e.target.value }));
                 if (errors.deliveryDate) {
