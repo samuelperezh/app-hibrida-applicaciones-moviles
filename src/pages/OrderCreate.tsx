@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Calendar, Clock, User, Package, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, Package, AlertCircle, ChevronDown, Plus, Tag, Minus, Plus as PlusIcon, Trash2, Coins } from 'lucide-react';
 import { useOrders } from '../context/OrdersContext';
 import { Order, OrderStatus } from '../types';
+import { useClients } from '../context/ClientsContext';
+import { useProducts } from '../context/ProductsContext';
 
 const OrderCreate: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addOrder, editOrder } = useOrders();
+  const { clients } = useClients();
+  const { products } = useProducts();
+
+  const currency = useMemo(() => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }), []);
   
   // Check if we're editing an existing order
   const editingOrder = location.state?.editOrder as Order | undefined;
@@ -25,17 +31,44 @@ const OrderCreate: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Popular customer suggestions (could come from localStorage in a real app)
-  const customerSuggestions = [
-    'María González',
-    'Carlos Ruiz',
-    'Ana López',
-    'José Martínez',
-    'Carmen Sánchez',
-  ];
+  // Shopping cart state
+  const [productQuery, setProductQuery] = useState('');
+  const [isProductOpen, setIsProductOpen] = useState(false);
+  const filteredProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(p => p.name.toLowerCase().includes(q));
+  }, [products, productQuery]);
 
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
+  const getProduct = (id: string) => products.find(p => p.id === id);
+  const totalUnits = useMemo(() => cart.reduce((sum, it) => sum + it.quantity, 0), [cart]);
+  const subtotal = useMemo(() => cart.reduce((sum, it) => {
+    const prod = getProduct(it.productId);
+    return sum + (prod ? prod.priceCOP * it.quantity : 0);
+  }, 0), [cart, products]);
+
+  // Searchable client dropdown state
+  const [clientQuery, setClientQuery] = useState('');
+  const [isClientOpen, setIsClientOpen] = useState(false);
+  const filteredClients = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q) ||
+      c.address.toLowerCase().includes(q)
+    );
+  }, [clients, clientQuery]);
+
+  // legacy suggestion flags removed; using dropdown
+
+  const getTodayInputValue = (): string => {
+    const now = new Date();
+    const tzOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+    const local = new Date(now.getTime() - tzOffsetMs);
+    return local.toISOString().split('T')[0];
+  };
 
   useEffect(() => {
     if (isEditing && editingOrder) {
@@ -52,7 +85,7 @@ const OrderCreate: React.FC = () => {
 
   // Set minimum date to today
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayInputValue();
     if (!formData.deliveryDate) {
       setFormData(prev => ({ ...prev, deliveryDate: today }));
     }
@@ -65,22 +98,18 @@ const OrderCreate: React.FC = () => {
       newErrors.customerName = 'El nombre del cliente es obligatorio';
     }
 
-    if (!formData.details.trim()) {
-      newErrors.details = 'Los detalles del pedido son obligatorios';
-    }
+    // Notes are optional regardless of cart contents
 
-    if (formData.quantity < 1) {
-      newErrors.quantity = 'La cantidad debe ser mayor a 0';
-    }
+    // quantity is derived from product cart; no direct quantity input
 
     if (!formData.deliveryDate) {
       newErrors.deliveryDate = 'La fecha de entrega es obligatoria';
     } else {
-      const selectedDate = new Date(formData.deliveryDate);
+      // Compare dates in local time to avoid timezone issues
+      const selectedDate = new Date(`${formData.deliveryDate}T00:00`);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      if (selectedDate < today) {
+      if (selectedDate.getTime() < today.getTime()) {
         newErrors.deliveryDate = 'La fecha no puede ser anterior a hoy';
       }
     }
@@ -107,10 +136,20 @@ const OrderCreate: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const summaryFromCart = cart.length > 0
+        ? cart.map(it => `${getProduct(it.productId)?.name || 'Producto'} x${it.quantity}`).join(', ')
+        : '';
+      const finalDetails = formData.details.trim() ? formData.details.trim() : summaryFromCart;
+      const finalQuantity = cart.length > 0 ? totalUnits : formData.quantity;
+      const payload = {
+        ...formData,
+        details: finalDetails,
+        quantity: finalQuantity,
+      };
       if (isEditing && editingOrder) {
-        editOrder(editingOrder.id, formData);
+        editOrder(editingOrder.id, payload);
       } else {
-        addOrder(formData);
+        addOrder(payload);
       }
       
       navigate('/app/orders');
@@ -126,34 +165,121 @@ const OrderCreate: React.FC = () => {
   };
 
   const handleCustomerNameChange = (value: string) => {
+    setClientQuery(value);
     setFormData(prev => ({ ...prev, customerName: value }));
-    
-    if (value.length > 0) {
-      const filtered = customerSuggestions.filter(name =>
-        name.toLowerCase().includes(value.toLowerCase()) &&
-        name.toLowerCase() !== value.toLowerCase()
-      );
-      setFilteredSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-    } else {
-      setShowSuggestions(false);
-    }
-
-    // Clear error when user starts typing
-    if (errors.customerName) {
-      setErrors(prev => ({ ...prev, customerName: '' }));
-    }
+    if (errors.customerName) setErrors(prev => ({ ...prev, customerName: '' }));
   };
 
-  const selectSuggestion = (name: string) => {
+  const selectClient = (name: string) => {
     setFormData(prev => ({ ...prev, customerName: name }));
-    setShowSuggestions(false);
+    setClientQuery(name);
+    setIsClientOpen(false);
   };
 
   return (
     <div className="flex-1 p-4">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer Name */}
+        {/* Products - Shopping Cart */}
+        <div>
+          <label className="block text-sm font-medium text-brown mb-2">
+            <Tag className="w-4 h-4 inline mr-1" />
+            Productos del pedido
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              onFocus={() => setIsProductOpen(true)}
+              onBlur={() => setTimeout(() => setIsProductOpen(false), 150)}
+              className="w-full px-4 py-3 pr-12 border border-brown/20 rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors"
+              placeholder="Buscar productos por nombre"
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setIsProductOpen(prev => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+              aria-label="Desplegar productos"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
+
+            {isProductOpen && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-brown/20 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {filteredProducts.length === 0 ? (
+                  <div className="p-4 text-brown/60 text-sm">No se encontraron productos</div>
+                ) : (
+                  filteredProducts.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setCart(prev => {
+                          const idx = prev.findIndex(it => it.productId === p.id);
+                          if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+                            return next;
+                          }
+                          return [...prev, { productId: p.id, quantity: 1 }];
+                        });
+                        setProductQuery('');
+                        setIsProductOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-beige/50 transition-colors flex items-center justify-between first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      <span className="text-brown">{p.name}</span>
+                      <span className="text-brown/70 text-sm">{currency.format(p.priceCOP)}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {cart.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {cart.map((it, idx) => {
+                const prod = getProduct(it.productId);
+                if (!prod) return null;
+                return (
+                  <div key={it.productId} className="bg-white border border-brown/10 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-golden/20 flex items-center justify-center">
+                        <Tag className="w-5 h-5 text-golden" />
+                      </div>
+                      <div className="font-medium text-brown truncate">{prod.name}</div>
+                      <div className="text-xs text-brown/70 flex items-center space-x-1 flex-shrink-0"><Coins className="w-3 h-3" /><span>{currency.format(prod.priceCOP)} c/u</span></div>
+                    </div>
+                    <div className="flex items-center space-x-2 w-full sm:w-auto sm:justify-end">
+                      <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
+                        <Minus className="w-4 h-4 text-brown" />
+                      </button>
+                      <span className="min-w-[2ch] text-brown font-medium text-center">{it.quantity}</span>
+                      <button type="button" onClick={() => setCart(prev => prev.map((x, i) => i === idx ? { ...x, quantity: x.quantity + 1 } : x))} className="p-2 rounded-lg bg-beige hover:bg-golden/20">
+                        <PlusIcon className="w-4 h-4 text-brown" />
+                      </button>
+                      <div className="w-16 sm:w-20 text-right text-brown font-medium text-sm sm:text-base">
+                        {currency.format(prod.priceCOP * it.quantity)}
+                      </div>
+                      <button type="button" onClick={() => setCart(prev => prev.filter(x => x.productId !== it.productId))} className="p-2 rounded-lg bg-red-50 hover:bg-red-100">
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 px-2 pt-2 text-brown">
+                <span className="font-medium">Unidades totales: {totalUnits}</span>
+                <span className="font-semibold">Subtotal: {currency.format(subtotal)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Customer - Searchable Dropdown */}
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium text-brown mb-2">
             <User className="w-4 h-4 inline mr-1" />
@@ -163,40 +289,59 @@ const OrderCreate: React.FC = () => {
             <input
               type="text"
               id="customerName"
-              value={formData.customerName}
+              value={clientQuery}
               onChange={(e) => handleCustomerNameChange(e.target.value)}
-              onFocus={() => {
-                if (formData.customerName && filteredSuggestions.length > 0) {
-                  setShowSuggestions(true);
-                }
-              }}
-              onBlur={() => {
-                // Delay hiding suggestions to allow clicking on them
-                setTimeout(() => setShowSuggestions(false), 200);
-              }}
-              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors ${
+              onFocus={() => setIsClientOpen(true)}
+              onBlur={() => setTimeout(() => setIsClientOpen(false), 150)}
+              className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors ${
                 errors.customerName ? 'border-red-300 bg-red-50' : 'border-brown/20'
               }`}
-              placeholder="Nombre del cliente"
+              placeholder="Buscar por nombre, teléfono o dirección"
               aria-describedby={errors.customerName ? 'customerName-error' : undefined}
             />
-            
-            {showSuggestions && filteredSuggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-brown/20 rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                {filteredSuggestions.map((name, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => selectSuggestion(name)}
-                    className="w-full text-left px-4 py-2 hover:bg-beige/50 transition-colors first:rounded-t-xl last:rounded-b-xl"
-                  >
-                    {name}
-                  </button>
-                ))}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setIsClientOpen(prev => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brown/60 hover:text-brown transition-colors"
+              aria-label="Desplegar clientes"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
+
+            {isClientOpen && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-brown/20 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {filteredClients.length === 0 ? (
+                  <div className="p-4 text-brown/60 text-sm">No se encontraron clientes</div>
+                ) : (
+                  filteredClients.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectClient(c.name)}
+                      className="w-full text-left px-4 py-3 hover:bg-beige/50 transition-colors flex flex-col space-y-1 first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      <div className="font-medium text-brown">{c.name}</div>
+                      <div className="text-xs text-brown/70">{c.phone}</div>
+                      <div className="text-xs text-brown/70">{c.address}</div>
+                    </button>
+                  ))
+                )}
+                <div className="border-t border-brown/10" />
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => navigate('/app/clients/new')}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-beige/30 hover:bg-beige/50 rounded-b-xl transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Crear nuevo cliente</span>
+                </button>
               </div>
             )}
           </div>
-          
+
           {errors.customerName && (
             <div
               id="customerName-error"
@@ -214,7 +359,7 @@ const OrderCreate: React.FC = () => {
         <div>
           <label htmlFor="details" className="block text-sm font-medium text-brown mb-2">
             <Package className="w-4 h-4 inline mr-1" />
-            Detalles del pedido
+            Notas del pedido
           </label>
           <textarea
             id="details"
@@ -229,7 +374,7 @@ const OrderCreate: React.FC = () => {
             className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors resize-none ${
               errors.details ? 'border-red-300 bg-red-50' : 'border-brown/20'
             }`}
-            placeholder="Describe los productos del pedido..."
+            placeholder="Agrega notas adicionales del pedido..."
             aria-describedby={errors.details ? 'details-error' : undefined}
           />
           
@@ -246,40 +391,7 @@ const OrderCreate: React.FC = () => {
           )}
         </div>
 
-        {/* Quantity */}
-        <div>
-          <label htmlFor="quantity" className="block text-sm font-medium text-brown mb-2">
-            Cantidad
-          </label>
-          <input
-            type="number"
-            id="quantity"
-            min="1"
-            value={formData.quantity}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }));
-              if (errors.quantity) {
-                setErrors(prev => ({ ...prev, quantity: '' }));
-              }
-            }}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-golden focus:border-transparent outline-none transition-colors ${
-              errors.quantity ? 'border-red-300 bg-red-50' : 'border-brown/20'
-            }`}
-            aria-describedby={errors.quantity ? 'quantity-error' : undefined}
-          />
-          
-          {errors.quantity && (
-            <div
-              id="quantity-error"
-              className="flex items-center space-x-1 text-red-600 text-sm mt-1"
-              role="alert"
-              aria-live="polite"
-            >
-              <AlertCircle className="w-4 h-4" />
-              <span>{errors.quantity}</span>
-            </div>
-          )}
-        </div>
+        {/* Quantity removed: handled by products cart */}
 
         {/* Delivery Date and Time */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -292,7 +404,7 @@ const OrderCreate: React.FC = () => {
               type="date"
               id="deliveryDate"
               value={formData.deliveryDate}
-              min={new Date().toISOString().split('T')[0]}
+              min={getTodayInputValue()}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, deliveryDate: e.target.value }));
                 if (errors.deliveryDate) {

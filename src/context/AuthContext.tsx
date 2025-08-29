@@ -1,13 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { getUser, saveUser, clearUser } from '../utils/storage';
+import { getUser, saveUser, clearUser, authenticateUser, registerNewUser, updateStoredUserProfile, changeStoredUserPassword } from '../utils/storage';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
+  register: (data: { username: string; password: string; name: string; email?: string }) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,22 +34,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Simulate authentication - in a real app, this would validate against a server
-    if (username && password) {
-      const userData: User = {
-        id: Date.now().toString(),
-        username,
-        name: username.charAt(0).toUpperCase() + username.slice(1),
-        email: `${username}@panapp.com`,
-        createdAt: new Date().toISOString(),
-      };
+    const authenticated = await authenticateUser(username, password);
+    if (!authenticated) return false;
+    saveUser(authenticated);
+    setUser(authenticated);
+    return true;
+  };
 
-      saveUser(userData);
-      setUser(userData);
-      return true;
+  const register = async (data: { username: string; password: string; name: string; email?: string }): Promise<{ ok: boolean; error?: string }> => {
+    const result = await registerNewUser(data);
+    if (result.ok && result.user) {
+      saveUser(result.user);
+      setUser(result.user);
+      return { ok: true };
     }
-
-    return false;
+    return { ok: false, error: result.error };
   };
 
   const logout = () => {
@@ -60,15 +61,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser = { ...user, ...userData };
       saveUser(updatedUser);
       setUser(updatedUser);
+      updateStoredUserProfile(user.id, userData);
     }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: 'Usuario no autenticado' };
+    if (newPassword.length < 6) return { ok: false, error: 'La nueva contraseña es muy corta' };
+    return changeStoredUserPassword(user.id, currentPassword, newPassword);
   };
 
   const value: AuthContextType = {
     user,
     isLoading,
     login,
+    register,
     logout,
     updateUser,
+    changePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

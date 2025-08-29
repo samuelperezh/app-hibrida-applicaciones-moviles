@@ -7,6 +7,23 @@ export interface User {
   createdAt: string;
 }
 
+export interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  priceCOP: number; // stored in COP as integer or float
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Order {
   id: string;
   customerName: string;

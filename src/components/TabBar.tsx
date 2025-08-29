@@ -1,10 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router';
-import { Home, ClipboardList, User } from 'lucide-react';
+import { Home, ClipboardList, User, Users, Tag } from 'lucide-react';
 
 const TabBar: React.FC = () => {
   const tabs = [
     { to: '/app/home', icon: Home, label: 'Inicio' },
+    { to: '/app/clients', icon: Users, label: 'Clientes' },
+    { to: '/app/products', icon: Tag, label: 'Productos' },
     { to: '/app/orders', icon: ClipboardList, label: 'Pedidos' },
     { to: '/app/profile', icon: User, label: 'Perfil' },
   ];
